@@ -1,0 +1,87 @@
+.card {
+  margin: 10px;
+  width: calc(91px * 5);
+  height: calc(55px * 5);
+  background: #F0F0F0;
+
+  .body {
+    padding: 1.5rem;
+
+    input, textarea {
+      background: none;
+      border: none;
+      margin: 0;
+      padding: 0;
+      border-radius: 8px;
+
+      &:focus {
+        background-color: #DDF;
+        outline: solid 1px #AAF;
+      }
+    }
+
+    .blank,
+    .blank input {
+      color: #AAA;
+    }
+
+    .main-container {
+      display: flex;
+
+      .left-pain {
+        .icon {
+          background-color: #FFF;
+          border-radius: 50px;
+          width: 100px;
+          height: 100px;
+
+          img {
+            border-radius: 50px;
+          }
+        }
+      }
+
+      .right-pain {
+        margin: 10px;
+
+        .department,
+        .department input {
+          font-size: 12px;
+        }
+
+        .title,
+        .title input {
+          font-size: 12px;
+        }
+
+        .name,
+        .name input {
+          font-size: 24px;
+          font-weight: bold;
+        }
+      }
+    }
+
+    .sub-container {
+      margin-top: 8px;
+      margin-left: 12px;
+
+      .birth,
+      .birth input {
+        font-size: 12px;
+      }
+
+      .url,
+      .url input {
+        font-size: 12px;
+      }
+
+      .other,
+      .other input {
+        margin: 4px;
+        font-size: 12px;
+        white-space: pre-wrap;
+      }
+    }
+  }
+}
