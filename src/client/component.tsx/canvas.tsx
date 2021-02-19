@@ -1,6 +1,6 @@
 import { Observable } from 'rxjs';
 import * as handpose from '@tensorflow-models/handpose';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import * as React from 'react';
 
 interface CanvasProp {
@@ -45,9 +45,9 @@ const CanvasComponent = (prop: CanvasProp) => {
         }
     }, []);
 
-    const style = useMemo(() => ({...prop.videoBox, border:'solid 1px black' }), [])
+    const style = useMemo(() => ({...prop.videoBox, border:'solid 1px black', position: 'absolute' }), [])
     return (
-        <canvas ref={canvasRef} style={style}/>
+        <canvas ref={canvasRef} style={style as CSSProperties}/>
     )
 }
 

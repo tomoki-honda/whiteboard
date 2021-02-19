@@ -53262,7 +53262,7 @@ const CanvasComponent = (prop) => {
             subscription.unsubscribe();
         };
     }, []);
-    const style = (0,react__WEBPACK_IMPORTED_MODULE_0__.useMemo)(() => (Object.assign(Object.assign({}, prop.videoBox), { border: 'solid 1px black' })), []);
+    const style = (0,react__WEBPACK_IMPORTED_MODULE_0__.useMemo)(() => (Object.assign(Object.assign({}, prop.videoBox), { border: 'solid 1px black', position: 'absolute' })), []);
     return (react__WEBPACK_IMPORTED_MODULE_0__.createElement("canvas", { ref: canvasRef, style: style }));
 };
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (CanvasComponent);
@@ -53350,7 +53350,10 @@ const BoardPageComponent = () => {
             const m = yield _tensorflow_models_handpose__WEBPACK_IMPORTED_MODULE_1__.load();
             const video = document.createElement('video');
             video.srcObject = stream;
-            // document.body.appendChild(video)
+            video.style.position = 'absolute';
+            video.style.transform = 'scaleX(-1)';
+            video.style.opacity = '0.5';
+            document.body.appendChild(video);
             const reflectPoint = () => __awaiter(void 0, void 0, void 0, function* () {
                 const pos = yield m.estimateHands(video);
                 if (pos.length > 0) {
@@ -53552,7 +53555,7 @@ __webpack_require__.r(__webpack_exports__);
 
 var ___CSS_LOADER_EXPORT___ = _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default()((_node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0___default()));
 // Module
-___CSS_LOADER_EXPORT___.push([module.id, ".board {\n  position: relative; }\n  .board video {\n    position: absolute;\n    top: 0;\n    left: 0;\n    width: calc(4 * 160px * 1.5);\n    height: calc(3 * 160px * 1.5); }\n  .board .point {\n    position: absolute;\n    z-index: 100;\n    width: 5px;\n    height: 5px;\n    background-color: red; }\n    .board .point.finger {\n      width: 10px;\n      height: 10px;\n      border-radius: 5px; }\n", "",{"version":3,"sources":["webpack://./src/client/pages/board.scss"],"names":[],"mappings":"AAAA;EACE,kBAAkB,EAAA;EADpB;IAII,kBAAkB;IAClB,MAAM;IACN,OAAO;IACP,4BAA4B;IAC5B,6BAA6B,EAAA;EARjC;IAYI,kBAAkB;IAClB,YAAY;IACZ,UAAU;IACV,WAAW;IACX,qBAAqB,EAAA;IAhBzB;MAmBM,WAAW;MACX,YAAY;MACZ,kBAAkB,EAAA","sourcesContent":[".board {\n  position: relative;\n\n  video {\n    position: absolute;\n    top: 0;\n    left: 0;\n    width: calc(4 * 160px * 1.5);\n    height: calc(3 * 160px * 1.5);\n  }\n\n  .point {\n    position: absolute;\n    z-index: 100;\n    width: 5px;\n    height: 5px;\n    background-color: red;\n\n    &.finger {\n      width: 10px;\n      height: 10px;\n      border-radius: 5px;\n    }\n  }\n}"],"sourceRoot":""}]);
+___CSS_LOADER_EXPORT___.push([module.id, ".board {\n  position: absolute;\n  z-index: 10000; }\n", "",{"version":3,"sources":["webpack://./src/client/pages/board.scss"],"names":[],"mappings":"AAAA;EACE,kBAAkB;EAClB,cAAc,EAAA","sourcesContent":[".board {\n  position: absolute;\n  z-index: 10000;\n}\n"],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 

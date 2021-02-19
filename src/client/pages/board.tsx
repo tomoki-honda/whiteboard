@@ -30,7 +30,10 @@ const BoardPageComponent = () => {
       const m = await handpose.load();
       const video = document.createElement('video');
       video.srcObject = stream;
-      // document.body.appendChild(video)
+      video.style.position = 'absolute';
+      video.style.transform = 'scaleX(-1)';
+      video.style.opacity = '0.5';
+      document.body.appendChild(video)
 
       const reflectPoint = async () => {
         const pos = await m.estimateHands(video)
