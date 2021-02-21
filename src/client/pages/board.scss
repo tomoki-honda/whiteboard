@@ -1,25 +1,4 @@
 .board {
-  position: relative;
-
-  video {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: calc(4 * 160px * 1.5);
-    height: calc(3 * 160px * 1.5);
-  }
-
-  .point {
-    position: absolute;
-    z-index: 100;
-    width: 5px;
-    height: 5px;
-    background-color: red;
-
-    &.finger {
-      width: 10px;
-      height: 10px;
-      border-radius: 5px;
-    }
-  }
+  position: absolute;
+  z-index: 10000;
 }

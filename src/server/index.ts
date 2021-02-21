@@ -3,7 +3,6 @@ import * as path from 'path';
 import * as passport from 'passport';
 import * as passportLocal from 'passport-local';
 const LocalStrategy = passportLocal.Strategy;
-import * as mongoose from 'mongoose';
 import * as session from 'express-session';
 import * as cookieParser from 'cookie-parser';
 import * as crypto from 'crypto';
@@ -17,15 +16,15 @@ import IUserDocument from './models/interface/IUserDocument';
 
 const PORT = process.env.PORT || server.port;
 const app = express();
-
-// mongoose.connect('mongodb://db/')
-mongoose.connect('mongodb://localhost:27017/')
-  .then(val => {
-    // console.log("mongo db connect success.", val);
-  })
-  .catch(reason => {
-    console.log("mongo db error.", reason);
-  });
+//
+// // mongoose.connect('mongodb://db/')
+// mongoose.connect('mongodb://localhost:27017/')
+//   .then(val => {
+//     // console.log("mongo db connect success.", val);
+//   })
+//   .catch(reason => {
+//     console.log("mongo db error.", reason);
+//   });
 
 const authMiddleware = (req: any, res: any, next: any) => {
   console.log("authMiddleware", req.isAuthenticated(), req.cookies)
@@ -49,7 +48,7 @@ const authMiddleware = (req: any, res: any, next: any) => {
           });
         }
       }
-      
+
       res.redirect(302, '/login');
     });
   } else {
@@ -110,7 +109,7 @@ app.post('/login', passport.authenticate('local'),
       path: '/',
       maxAge: 30 * 60 * 1000 // 30分
     });
-    
+
     next()
   },
   (req, res) => {
@@ -172,7 +171,7 @@ app.post('/api/create', (req, res, next) => {
   const instance = new User();
   instance.login_id = req.body.username;
   instance.password = req.body.password;
-  
+
   const obj = await (new Promise<{ err: any, id?: string }>((resolve, _) => {
     instance.save((err, doc) => {
       if (err) {
@@ -194,7 +193,7 @@ app.post('/api/create', (req, res, next) => {
     });
     return;
   }
-  
+
   console.log('OK', obj.id)
   res.status(200).send({
     ok: true, id: obj.id,
