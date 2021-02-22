@@ -1,0 +1,14 @@
+.button {
+  width: 120px;
+  border-bottom-left-radius: 5px;
+  border-bottom-right-radius: 5px;
+  background-color: #FFFFFFAA;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 5px;
+
+  &.focus {
+    background-color: #AAAAAAAA;
+  }
+}

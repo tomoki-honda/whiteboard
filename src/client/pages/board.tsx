@@ -19,7 +19,7 @@ interface Finger {
 const BoardPageComponent = () => {
   const eventBus = useMemo<Subject<handpose.AnnotatedPrediction[]>>(() => new Subject(), [])
   const [videoBox, setVideoBox] = useState<{width: number, height: number}>();
-  const [videoElement, setVideoElement] = useState<HTMLVideoElement>();
+  const [viewBox, setViewBox] = useState<{width: number, height: number}>();
   const videoContainerRef = useRef<HTMLDivElement>();
 
   useEffect(() => {
@@ -50,20 +50,25 @@ const BoardPageComponent = () => {
         requestAnimationFrame(reflectPoint)
       }
       video.onloadedmetadata = () => {
-        video.play()
+        const _viewRatio = 1.5;
+        video.width = video.videoWidth * _viewRatio;
+        video.height = video.videoHeight * _viewRatio;
+        
+        video.play();
         setVideoBox({width: video.videoWidth, height: video.videoHeight})
-        console.log({width: video.videoWidth, height: video.videoHeight})
+        setViewBox({width: video.width, height: video.height})
+        console.log({width: video.videoWidth, height: video.videoHeight}, {width: video.width, height: video.height})
       }
       video.onloadeddata = reflectPoint;
-
-      setVideoElement(video);
     })()
   }, [!!videoContainerRef]);
 
   return (
     <div className="board">
-      <div className="video-container" ref={videoContainerRef}>Now Loading...</div>
-      {videoBox && <Canvas eventBus={eventBus} videoBox={videoBox} />}
+      <div className="body" style={viewBox && { width: viewBox.width, height: viewBox.height }}>
+        <div className="video-container" ref={videoContainerRef}>Now Loading...</div>
+        {videoBox && viewBox && <Canvas eventBus={eventBus} videoBox={videoBox} viewBox={viewBox} />}
+      </div>
     </div>
   )
 };
