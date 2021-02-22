@@ -53219,10 +53219,10 @@ const version = '2.8.6';
 
 /***/ }),
 
-/***/ "./src/client/component.tsx/canvas.tsx":
-/*!*********************************************!*\
-  !*** ./src/client/component.tsx/canvas.tsx ***!
-  \*********************************************/
+/***/ "./src/client/component/canvas.tsx":
+/*!*****************************************!*\
+  !*** ./src/client/component/canvas.tsx ***!
+  \*****************************************/
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
@@ -53231,17 +53231,29 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! react */ "./node_modules/react/index.js");
+/* harmony import */ var _canvas_scss__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./canvas.scss */ "./src/client/component/canvas.scss");
+
 
 
 const CanvasComponent = (prop) => {
     const canvasRef = (0,react__WEBPACK_IMPORTED_MODULE_0__.useRef)();
+    const [vectors, setVectors] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)([]);
+    const [path, setPath] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)();
+    const createPath = (_vectors) => {
+        let line = _vectors.reduce((p, vector, i) => {
+            const prefix = i == 0 ? "M" : "L";
+            p += `${prefix} ${vector.x},${vector.y} `;
+            return p;
+        }, "");
+        return line.length > 0 ? line + "" : null;
+    };
     (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
         console.log('subscribed');
         const subscription = prop.eventBus.subscribe(predictions => {
             if (canvasRef.current == null && predictions.length === 0)
                 return;
-            const context = canvasRef.current.getContext('2d');
-            const canvasBox = { width: canvasRef.current.width, height: canvasRef.current.height };
+            // const context = canvasRef.current.getContext('2d');
+            // const canvasBox = { width: canvasRef.current.width, height: canvasRef.current.height };
             const annotations = predictions[0].annotations;
             const keys = Object.keys(annotations);
             const f = keys.reduce((p, key) => {
@@ -53249,21 +53261,31 @@ const CanvasComponent = (prop) => {
                 return p;
             }, {});
             const finger = f.indexFinger[3];
-            const point = {
-                x: canvasBox.width - canvasBox.width * finger.x / prop.videoBox.width,
-                y: canvasBox.height * finger.y / prop.videoBox.height
-            };
-            console.log('point', point, canvasBox, finger, predictions[0]);
-            context.fillStyle = 'rgb(255, 0, 0)';
-            context.fillRect(point.x, point.y, 1, 1);
+            // const point = {
+            //   x: canvasBox.width - canvasBox.width * finger.x / prop.videoBox.width,
+            //   y: canvasBox.height * finger.y / prop.videoBox.height
+            // }
+            // console.log('point', point, canvasBox, finger, predictions[0]);
+            vectors.push(finger);
+            setPath(createPath(vectors));
+            setVectors(vectors);
+            // context.fillStyle = 'rgb(255, 0, 0)';
+            // context.fillRect(point.x, point.y, 1, 1);  // write
         });
         return () => {
             console.log('unsuscribed');
             subscription.unsubscribe();
         };
     }, []);
-    const style = (0,react__WEBPACK_IMPORTED_MODULE_0__.useMemo)(() => (Object.assign(Object.assign({}, prop.videoBox), { border: 'solid 1px black', position: 'absolute' })), []);
-    return (react__WEBPACK_IMPORTED_MODULE_0__.createElement("canvas", { ref: canvasRef, style: style }));
+    const pathStyles = (0,react__WEBPACK_IMPORTED_MODULE_0__.useMemo)(() => ({
+        stroke: "#FFF",
+        fill: "none",
+        strokeWidth: 2,
+    }), []);
+    // const style = useMemo(() => ({...prop.videoBox, border:'solid 1px black', position: 'absolute', visibility: 'hidden' } as CSSProperties), [])
+    return (react__WEBPACK_IMPORTED_MODULE_0__.createElement(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, path &&
+        react__WEBPACK_IMPORTED_MODULE_0__.createElement("svg", { viewBox: "0 0 640 480", width: "640", height: "480", xmlns: "http://www.w3.org/2000/svg" },
+            react__WEBPACK_IMPORTED_MODULE_0__.createElement("path", { style: pathStyles, d: path }))));
 };
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (CanvasComponent);
 
@@ -53321,7 +53343,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _tensorflow_models_handpose__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @tensorflow-models/handpose */ "./node_modules/@tensorflow-models/handpose/dist/handpose.esm.js");
 /* harmony import */ var _board_scss__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./board.scss */ "./src/client/pages/board.scss");
 /* harmony import */ var rxjs__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! rxjs */ "./node_modules/rxjs/_esm5/internal/Subject.js");
-/* harmony import */ var _component_tsx_canvas__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../component.tsx/canvas */ "./src/client/component.tsx/canvas.tsx");
+/* harmony import */ var _component_canvas__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../component/canvas */ "./src/client/component/canvas.tsx");
 var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -53340,7 +53362,11 @@ var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _argume
 const BoardPageComponent = () => {
     const eventBus = (0,react__WEBPACK_IMPORTED_MODULE_0__.useMemo)(() => new rxjs__WEBPACK_IMPORTED_MODULE_4__.Subject(), []);
     const [videoBox, setVideoBox] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)();
+    const [videoElement, setVideoElement] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)();
+    const videoContainerRef = (0,react__WEBPACK_IMPORTED_MODULE_0__.useRef)();
     (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
+        if (!videoContainerRef)
+            return;
         (() => __awaiter(void 0, void 0, void 0, function* () {
             const stream = yield navigator.mediaDevices.getUserMedia({
                 audio: false,
@@ -53350,10 +53376,13 @@ const BoardPageComponent = () => {
             const m = yield _tensorflow_models_handpose__WEBPACK_IMPORTED_MODULE_1__.load();
             const video = document.createElement('video');
             video.srcObject = stream;
-            video.style.position = 'absolute';
+            // video.style.position = 'absolute';
             video.style.transform = 'scaleX(-1)';
             video.style.opacity = '0.5';
-            document.body.appendChild(video);
+            // document.body.appendChild(video);
+            const container = videoContainerRef.current;
+            container.innerHTML = "";
+            container.appendChild(video);
             const reflectPoint = () => __awaiter(void 0, void 0, void 0, function* () {
                 const pos = yield m.estimateHands(video);
                 if (pos.length > 0) {
@@ -53368,9 +53397,12 @@ const BoardPageComponent = () => {
                 console.log({ width: video.videoWidth, height: video.videoHeight });
             };
             video.onloadeddata = reflectPoint;
+            setVideoElement(video);
         }))();
-    }, []);
-    return (react__WEBPACK_IMPORTED_MODULE_0__.createElement("div", { className: "board" }, videoBox && react__WEBPACK_IMPORTED_MODULE_0__.createElement(_component_tsx_canvas__WEBPACK_IMPORTED_MODULE_3__.default, { eventBus: eventBus, videoBox: videoBox })));
+    }, [!!videoContainerRef]);
+    return (react__WEBPACK_IMPORTED_MODULE_0__.createElement("div", { className: "board" },
+        react__WEBPACK_IMPORTED_MODULE_0__.createElement("div", { className: "video-container", ref: videoContainerRef }, "Now Loading..."),
+        videoBox && react__WEBPACK_IMPORTED_MODULE_0__.createElement(_component_canvas__WEBPACK_IMPORTED_MODULE_3__.default, { eventBus: eventBus, videoBox: videoBox })));
 };
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (BoardPageComponent);
 
@@ -53508,6 +53540,33 @@ const SignUpPageComponent = () => {
 
 /***/ }),
 
+/***/ "./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].use[1]!./node_modules/sass-loader/dist/cjs.js!./src/client/component/canvas.scss":
+/*!***************************************************************************************************************************************************!*\
+  !*** ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].use[1]!./node_modules/sass-loader/dist/cjs.js!./src/client/component/canvas.scss ***!
+  \***************************************************************************************************************************************************/
+/***/ ((module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../node_modules/css-loader/dist/runtime/cssWithMappingToString.js */ "./node_modules/css-loader/dist/runtime/cssWithMappingToString.js");
+/* harmony import */ var _node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../node_modules/css-loader/dist/runtime/api.js */ "./node_modules/css-loader/dist/runtime/api.js");
+/* harmony import */ var _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__);
+// Imports
+
+
+var ___CSS_LOADER_EXPORT___ = _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default()((_node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0___default()));
+// Module
+___CSS_LOADER_EXPORT___.push([module.id, "svg {\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  transform: scaleX(-1); }\n", "",{"version":3,"sources":["webpack://./src/client/component/canvas.scss"],"names":[],"mappings":"AAAA;EACE,kBAAkB;EAClB,MAAM;EACN,SAAS;EACT,qBAAqB,EAAA","sourcesContent":["svg {\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  transform: scaleX(-1);\n}"],"sourceRoot":""}]);
+// Exports
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
+
+
+/***/ }),
+
 /***/ "./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].use[1]!./node_modules/sass-loader/dist/cjs.js!./src/client/index.scss":
 /*!****************************************************************************************************************************************!*\
   !*** ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].use[1]!./node_modules/sass-loader/dist/cjs.js!./src/client/index.scss ***!
@@ -53555,7 +53614,7 @@ __webpack_require__.r(__webpack_exports__);
 
 var ___CSS_LOADER_EXPORT___ = _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default()((_node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0___default()));
 // Module
-___CSS_LOADER_EXPORT___.push([module.id, ".board {\n  position: absolute;\n  z-index: 10000; }\n", "",{"version":3,"sources":["webpack://./src/client/pages/board.scss"],"names":[],"mappings":"AAAA;EACE,kBAAkB;EAClB,cAAc,EAAA","sourcesContent":[".board {\n  position: absolute;\n  z-index: 10000;\n}\n"],"sourceRoot":""}]);
+___CSS_LOADER_EXPORT___.push([module.id, ".board {\n  position: relative; }\n", "",{"version":3,"sources":["webpack://./src/client/pages/board.scss"],"names":[],"mappings":"AAAA;EAGE,kBAAkB,EAAA","sourcesContent":[".board {\n  // position: absolute;\n  // z-index: 10000;\n  position: relative;\n}\n"],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -90073,6 +90132,36 @@ if ( true && module.exports) {
   Math    // math: package containing random, pow, and seedrandom
 );
 
+
+/***/ }),
+
+/***/ "./src/client/component/canvas.scss":
+/*!******************************************!*\
+  !*** ./src/client/component/canvas.scss ***!
+  \******************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! !../../../node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js */ "./node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js");
+/* harmony import */ var _node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_css_loader_dist_cjs_js_ruleSet_1_rules_1_use_1_node_modules_sass_loader_dist_cjs_js_canvas_scss__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! !!../../../node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].use[1]!../../../node_modules/sass-loader/dist/cjs.js!./canvas.scss */ "./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].use[1]!./node_modules/sass-loader/dist/cjs.js!./src/client/component/canvas.scss");
+
+            
+
+var options = {};
+
+options.insert = "head";
+options.singleton = false;
+
+var update = _node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0___default()(_node_modules_css_loader_dist_cjs_js_ruleSet_1_rules_1_use_1_node_modules_sass_loader_dist_cjs_js_canvas_scss__WEBPACK_IMPORTED_MODULE_1__.default, options);
+
+
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_css_loader_dist_cjs_js_ruleSet_1_rules_1_use_1_node_modules_sass_loader_dist_cjs_js_canvas_scss__WEBPACK_IMPORTED_MODULE_1__.default.locals || {});
 
 /***/ }),
 
