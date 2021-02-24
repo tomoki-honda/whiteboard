@@ -5,6 +5,7 @@
     "strictPropertyInitialization": false,
     "noImplicitAny": true,
     "noImplicitReturns": true,
+    "allowSyntheticDefaultImports": true,
     "typeRoots": ["@types", "node_modules/@types"],
     "module": "commonjs",
     "target": "es5",

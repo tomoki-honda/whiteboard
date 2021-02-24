@@ -53219,6 +53219,41 @@ const version = '2.8.6';
 
 /***/ }),
 
+/***/ "./src/client/SWRegister.tsx":
+/*!***********************************!*\
+  !*** ./src/client/SWRegister.tsx ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! react */ "./node_modules/react/index.js");
+
+class SWRegister extends react__WEBPACK_IMPORTED_MODULE_0__.PureComponent {
+    componentDidMount() {
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker
+                .register('/assets/js/sw.js')
+                .then((reg) => {
+                console.log("service worker registration successful", reg);
+            })
+                .catch(err => {
+                console.warn("service worker registration failed", err.message);
+            });
+        }
+    }
+    render() {
+        return (react__WEBPACK_IMPORTED_MODULE_0__.createElement(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null));
+    }
+}
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (SWRegister);
+
+
+/***/ }),
+
 /***/ "./src/client/component/canvas.tsx":
 /*!*****************************************!*\
   !*** ./src/client/component/canvas.tsx ***!
@@ -53232,45 +53267,118 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! react */ "./node_modules/react/index.js");
 /* harmony import */ var _canvas_scss__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./canvas.scss */ "./src/client/component/canvas.scss");
+/* harmony import */ var _canvas_button__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./canvas/button */ "./src/client/component/canvas/button.tsx");
+/* harmony import */ var _canvas_bspline__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./canvas/bspline */ "./src/client/component/canvas/bspline.ts");
 
 
 
+
+
+const BSPLINE_DEGREE = 5;
 const CanvasComponent = (prop) => {
+    var _a, _b, _c, _d;
     const canvasRef = (0,react__WEBPACK_IMPORTED_MODULE_0__.useRef)();
-    const [vectors, setVectors] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)([]);
-    const [path, setPath] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)();
+    const [pointer, setPointer] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)();
+    const [lines, setLines] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)([[]]);
+    const [paths, setPaths] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)([]);
+    const [trigger, setTrigger] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false);
+    const [fingers, setFingers] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)();
+    const [strokeColor, setStrokeColor] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)("#FFF");
+    const ratio = (0,react__WEBPACK_IMPORTED_MODULE_0__.useCallback)((arg) => {
+        return {
+            x: arg.x * prop.viewBox.width / prop.videoBox.width,
+            y: arg.y * prop.viewBox.height / prop.videoBox.height
+        };
+    }, [
+        (_a = prop.viewBox) === null || _a === void 0 ? void 0 : _a.width,
+        (_b = prop.viewBox) === null || _b === void 0 ? void 0 : _b.height,
+        (_c = prop.videoBox) === null || _c === void 0 ? void 0 : _c.width,
+        (_d = prop.videoBox) === null || _d === void 0 ? void 0 : _d.height
+    ]);
     const createPath = (_vectors) => {
-        let line = _vectors.reduce((p, vector, i) => {
+        const _v = _vectors.map(v => ({ x: v.x, y: v.y }));
+        const bspline = new _canvas_bspline__WEBPACK_IMPORTED_MODULE_3__.BSpline(_v, BSPLINE_DEGREE, true);
+        const splineVectors = [];
+        for (let t = 0; t <= 1; t += 0.01) {
+            splineVectors.push(bspline.calcAt(t));
+        }
+        console.log(splineVectors);
+        let line = splineVectors.reduce((p, vector, i) => {
             const prefix = i == 0 ? "M" : "L";
-            p += `${prefix} ${vector.x},${vector.y} `;
+            const preVector = i == 0 ? null : _vectors[i - 1];
+            // const preDistance = distance(preVector, vector);
+            // console.log("preDistance", preDistance)
+            const v = ratio(vector);
+            p += `${prefix} ${v.x},${v.y} `;
             return p;
         }, "");
         return line.length > 0 ? line + "" : null;
+    };
+    const frame = () => {
+    };
+    const distance = (point1, point2) => {
+        const dx = point2.x - point1.x;
+        const dy = point2.y - point1.y;
+        const px = dx * dx;
+        const py = dy * dy;
+        const sqrt = Math.sqrt(px + py);
+        return sqrt;
+    };
+    const dot = (a, b) => {
+        return a.x * b.x + a.y * b.y;
+    };
+    const calcTrigger = (thumb, palmBase) => {
+        const _dot = dot(thumb, palmBase);
+        const result = dot(thumb, palmBase) > 0;
+        setTrigger(result);
+        return result;
+    };
+    const write = (vector, ts) => {
+        const index = lines.length - 1;
+        lines[index].push(Object.assign(Object.assign({}, vector), { ts }));
+        const paths = lines.map(line => createPath(line));
+        setPaths(paths);
+        setLines(lines);
     };
     (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
         console.log('subscribed');
         const subscription = prop.eventBus.subscribe(predictions => {
             if (canvasRef.current == null && predictions.length === 0)
                 return;
-            // const context = canvasRef.current.getContext('2d');
-            // const canvasBox = { width: canvasRef.current.width, height: canvasRef.current.height };
             const annotations = predictions[0].annotations;
             const keys = Object.keys(annotations);
-            const f = keys.reduce((p, key) => {
+            const fingers = keys.reduce((p, key) => {
                 p[key] = annotations[key].map(joint => ({ x: joint[0], y: joint[1] }));
                 return p;
             }, {});
-            const finger = f.indexFinger[3];
-            // const point = {
-            //   x: canvasBox.width - canvasBox.width * finger.x / prop.videoBox.width,
-            //   y: canvasBox.height * finger.y / prop.videoBox.height
-            // }
-            // console.log('point', point, canvasBox, finger, predictions[0]);
-            vectors.push(finger);
-            setPath(createPath(vectors));
-            setVectors(vectors);
-            // context.fillStyle = 'rgb(255, 0, 0)';
-            // context.fillRect(point.x, point.y, 1, 1);  // write
+            setFingers(fingers);
+            // console.log("fingers", fingers)
+            // const thumbDistance = distance(fingers.thumb[3], fingers.thumb[0]);
+            // const indexFingerDistance = distance(fingers.indexFinger[3], fingers.indexFinger[0]);
+            // const middleFingerDistance = distance(fingers.middleFinger[3], fingers.middleFinger[0]);
+            // const ringFingerDistance = distance(fingers.ringFinger[3], fingers.ringFinger[0]);
+            // const pinkyDistance = distance(fingers.pinky[3], fingers.pinky[0]);
+            // console.log("fingerDistance", {
+            //   thumb: thumbDistance,
+            //   index: indexFingerDistance,
+            //   middle: middleFingerDistance,
+            //   ring: ringFingerDistance,
+            //   pinky: pinkyDistance
+            // });
+            setPointer(fingers.indexFinger[3]);
+            const _vec = (s, e) => {
+                const x = e.x - s.x;
+                const y = e.y - s.y;
+                return { x, y };
+            };
+            const _trigger = calcTrigger(_vec(fingers.thumb[2], fingers.thumb[3]), _vec(fingers.thumb[0], fingers.palmBase[0]));
+            if (_trigger) {
+                write(fingers.indexFinger[3], Date.now());
+            }
+            else if (lines.length > 0 && lines[lines.length - 1].length != 0) {
+                lines.push([]);
+                setLines(lines);
+            }
         });
         return () => {
             console.log('unsuscribed');
@@ -53278,16 +53386,253 @@ const CanvasComponent = (prop) => {
         };
     }, []);
     const pathStyles = (0,react__WEBPACK_IMPORTED_MODULE_0__.useMemo)(() => ({
-        stroke: "#FFF",
+        stroke: strokeColor,
         fill: "none",
         strokeWidth: 2,
-    }), []);
+    }), [strokeColor]);
+    const pointerStyle = (0,react__WEBPACK_IMPORTED_MODULE_0__.useMemo)(() => {
+        if (!pointer)
+            return {};
+        return {
+            left: ratio(pointer).x,
+            top: ratio(pointer).y
+        };
+    }, [pointer === null || pointer === void 0 ? void 0 : pointer.x, pointer === null || pointer === void 0 ? void 0 : pointer.y]);
+    const born = (0,react__WEBPACK_IMPORTED_MODULE_0__.useMemo)(() => {
+        if (!fingers)
+            return (react__WEBPACK_IMPORTED_MODULE_0__.createElement(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null));
+        // console.log("fingers", fingers)
+        return (react__WEBPACK_IMPORTED_MODULE_0__.createElement(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null,
+            fingers.thumb && fingers.thumb.map((f, i) => (react__WEBPACK_IMPORTED_MODULE_0__.createElement("div", { key: i, className: "pointer", style: { left: ratio(f).x, top: ratio(f).y } },
+                react__WEBPACK_IMPORTED_MODULE_0__.createElement("div", { style: { opacity: 0.8, backgroundColor: "#AAF" } })))),
+            fingers.indexFinger && fingers.indexFinger.map((f, i) => (react__WEBPACK_IMPORTED_MODULE_0__.createElement("div", { key: i, className: "pointer", style: { left: ratio(f).x, top: ratio(f).y } },
+                react__WEBPACK_IMPORTED_MODULE_0__.createElement("div", { style: { opacity: 0.8, backgroundColor: "#FAA" } })))),
+            fingers.middleFinger && fingers.middleFinger.map((f, i) => (react__WEBPACK_IMPORTED_MODULE_0__.createElement("div", { key: i, className: "pointer", style: { left: ratio(f).x, top: ratio(f).y } },
+                react__WEBPACK_IMPORTED_MODULE_0__.createElement("div", { style: { opacity: 0.8, backgroundColor: "#AFA" } })))),
+            fingers.ringFinger && fingers.ringFinger.map((f, i) => (react__WEBPACK_IMPORTED_MODULE_0__.createElement("div", { key: i, className: "pointer", style: { left: ratio(f).x, top: ratio(f).y } },
+                react__WEBPACK_IMPORTED_MODULE_0__.createElement("div", { style: { opacity: 0.8, backgroundColor: "#AFF" } })))),
+            fingers.pinky && fingers.pinky.map((f, i) => (react__WEBPACK_IMPORTED_MODULE_0__.createElement("div", { key: i, className: "pointer", style: { left: ratio(f).x, top: ratio(f).y } },
+                react__WEBPACK_IMPORTED_MODULE_0__.createElement("div", { style: { opacity: 0.8, backgroundColor: "#FFA" } })))),
+            fingers.palmBase && fingers.palmBase.map((f, i) => (react__WEBPACK_IMPORTED_MODULE_0__.createElement("div", { key: i, className: "pointer", style: { left: ratio(f).x, top: ratio(f).y } },
+                react__WEBPACK_IMPORTED_MODULE_0__.createElement("div", { style: { opacity: 0.8, backgroundColor: "#FAF" } }))))));
+    }, [JSON.stringify(fingers)]);
+    const prepareVector = (v) => {
+        var _a;
+        if (!v)
+            return { x: -100, y: -100 };
+        if (!((_a = prop.viewBox) === null || _a === void 0 ? void 0 : _a.width))
+            return ratio(v);
+        //     const normalizeX = prop.videoBox.width - (v.x  * prop.videoBox.width / prop.viewBox.width);
+        // console.log(normalizeX)
+        //     return {
+        //       x: normalizeX * prop.viewBox.width / prop.videoBox.width,
+        //       y: v.y
+        //     };
+        return {
+            x: prop.viewBox.width - ratio(v).x,
+            y: ratio(v).y
+        };
+    };
     // const style = useMemo(() => ({...prop.videoBox, border:'solid 1px black', position: 'absolute', visibility: 'hidden' } as CSSProperties), [])
-    return (react__WEBPACK_IMPORTED_MODULE_0__.createElement(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, path &&
-        react__WEBPACK_IMPORTED_MODULE_0__.createElement("svg", { viewBox: "0 0 640 480", width: "640", height: "480", xmlns: "http://www.w3.org/2000/svg" },
-            react__WEBPACK_IMPORTED_MODULE_0__.createElement("path", { style: pathStyles, d: path }))));
+    return (react__WEBPACK_IMPORTED_MODULE_0__.createElement(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null,
+        react__WEBPACK_IMPORTED_MODULE_0__.createElement("div", { className: "canvas" },
+            react__WEBPACK_IMPORTED_MODULE_0__.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: `0 0 ${prop.viewBox.width} ${prop.viewBox.height}`, width: prop.viewBox.width, height: prop.viewBox.height }, paths.length > 0 &&
+                paths.map((path, i) => (react__WEBPACK_IMPORTED_MODULE_0__.createElement("path", { key: i, style: pathStyles, d: path })))),
+            react__WEBPACK_IMPORTED_MODULE_0__.createElement("div", { className: "debug-trigger", style: {
+                    position: "absolute",
+                    top: 0,
+                    right: 0,
+                    width: 20,
+                    height: 20,
+                    borderRadius: 10,
+                    backgroundColor: (trigger ? "#F00" : "#000")
+                } }),
+            pointer && !trigger && react__WEBPACK_IMPORTED_MODULE_0__.createElement("div", { className: "pointer", style: pointerStyle },
+                react__WEBPACK_IMPORTED_MODULE_0__.createElement("div", null))),
+        react__WEBPACK_IMPORTED_MODULE_0__.createElement("div", { className: "button-container" },
+            react__WEBPACK_IMPORTED_MODULE_0__.createElement(_canvas_button__WEBPACK_IMPORTED_MODULE_2__.default, { order: 0, label: "黒", point: prepareVector(pointer), click: trigger, callback: () => setStrokeColor("#000") }),
+            react__WEBPACK_IMPORTED_MODULE_0__.createElement(_canvas_button__WEBPACK_IMPORTED_MODULE_2__.default, { order: 0, label: "白", point: prepareVector(pointer), click: trigger, callback: () => setStrokeColor("#FFF") }))));
 };
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (CanvasComponent);
+
+
+/***/ }),
+
+/***/ "./src/client/component/canvas/bspline.ts":
+/*!************************************************!*\
+  !*** ./src/client/component/canvas/bspline.ts ***!
+  \************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "BSpline": () => (/* binding */ BSpline)
+/* harmony export */ });
+class BSpline {
+    constructor(points, degree, copy) {
+        this.dimKey = {
+            0: "x",
+            1: "y",
+            2: "z"
+        };
+        this.points = copy ? points.slice() : points;
+        this.degree = degree;
+        this.dimension = 2; // dimension
+        if (degree == 2) {
+            this.baseFunc = this.basisDeg2;
+            this.baseFuncRangeInt = 2;
+        }
+        else if (degree == 3) {
+            this.baseFunc = this.basisDeg3;
+            this.baseFuncRangeInt = 2;
+        }
+        else if (degree == 4) {
+            this.baseFunc = this.basisDeg4;
+            this.baseFuncRangeInt = 3;
+        }
+        else if (degree == 5) {
+            this.baseFunc = this.basisDeg5;
+            this.baseFuncRangeInt = 3;
+        }
+    }
+    seqAt(dim) {
+        const points = this.points;
+        const margin = this.degree + 1;
+        return (n) => {
+            if (n < margin) {
+                return points[0][this.dimKey[dim]];
+            }
+            else if (points.length + margin <= n) {
+                return points[points.length - 1][this.dimKey[dim]];
+            }
+            return points[n - margin][this.dimKey[dim]];
+        };
+    }
+    basisDeg2(x) {
+        if (-0.5 <= x && x < 0.5) {
+            return 0.75 - x * x;
+        }
+        else if (0.5 <= x && x <= 1.5) {
+            return 1.125 + (-1.5 + x / 2.0) * x;
+        }
+        else if (-1.5 <= x && x < -0.5) {
+            return 1.125 + (1.5 + x / 2.0) * x;
+        }
+        return 0;
+    }
+    basisDeg3(x) {
+        if (-1 <= x && x < 0) {
+            return 2.0 / 3.0 + (-1.0 - x / 2.0) * x * x;
+        }
+        else if (1 <= x && x <= 2) {
+            return 4.0 / 3.0 + x * (-2.0 + (1.0 - x / 6.0) * x);
+        }
+        else if (-2 <= x && x < -1) {
+            return 4.0 / 3.0 + x * (2.0 + (1.0 + x / 6.0) * x);
+        }
+        else if (0 <= x && x < 1) {
+            return 2.0 / 3.0 + (-1.0 + x / 2.0) * x * x;
+        }
+        return 0;
+    }
+    basisDeg4(x) {
+        if (-1.5 <= x && x < -0.5) {
+            return 55.0 / 96.0 + x * (-(5.0 / 24.0) + x * (-(5.0 / 4.0) + (-(5.0 / 6.0) - x / 6.0) * x));
+        }
+        else if (0.5 <= x && x < 1.5) {
+            return 55.0 / 96.0 + x * (5.0 / 24.0 + x * (-(5.0 / 4.0) + (5.0 / 6.0 - x / 6.0) * x));
+        }
+        else if (1.5 <= x && x <= 2.5) {
+            return 625.0 / 384.0 + x * (-(125.0 / 48.0) + x * (25.0 / 16.0 + (-(5.0 / 12.0) + x / 24.0) * x));
+        }
+        else if (-2.5 <= x && x <= -1.5) {
+            return 625.0 / 384.0 + x * (125.0 / 48.0 + x * (25.0 / 16.0 + (5.0 / 12.0 + x / 24.0) * x));
+        }
+        else if (-1.5 <= x && x < 1.5) {
+            return 115.0 / 192.0 + x * x * (-(5.0 / 8.0) + x * x / 4.0);
+        }
+        return 0;
+    }
+    basisDeg5(x) {
+        if (-2 <= x && x < -1) {
+            return 17.0 / 40.0 + x * (-(5.0 / 8.0) + x * (-(7.0 / 4.0) + x * (-(5.0 / 4.0) + (-(3.0 / 8.0) - x / 24.0) * x)));
+        }
+        else if (0 <= x && x < 1) {
+            return 11.0 / 20.0 + x * x * (-(1.0 / 2.0) + (1.0 / 4.0 - x / 12.0) * x * x);
+        }
+        else if (2 <= x && x <= 3) {
+            return 81.0 / 40.0 + x * (-(27.0 / 8.0) + x * (9.0 / 4.0 + x * (-(3.0 / 4.0) + (1.0 / 8.0 - x / 120.0) * x)));
+        }
+        else if (-3 <= x && x < -2) {
+            return 81.0 / 40.0 + x * (27.0 / 8.0 + x * (9.0 / 4.0 + x * (3.0 / 4.0 + (1.0 / 8.0 + x / 120.0) * x)));
+        }
+        else if (1 <= x && x < 2) {
+            return 17.0 / 40.0 + x * (5.0 / 8.0 + x * (-(7.0 / 4.0) + x * (5.0 / 4.0 + (-(3.0 / 8.0) + x / 24.0) * x)));
+        }
+        else if (-1 <= x && x < 0) {
+            return 11.0 / 20.0 + x * x * (-(1.0 / 2.0) + (1.0 / 4.0 + x / 12.0) * x * x);
+        }
+        return 0;
+    }
+    getInterpol(seq, t) {
+        const rangeInt = this.baseFuncRangeInt;
+        const tInt = Math.floor(t);
+        let result = 0;
+        for (let i = tInt - rangeInt; i <= tInt + rangeInt; i++) {
+            result += seq(i) * this.baseFunc(t - i);
+        }
+        return result;
+    }
+    calcAt(t) {
+        const _t = t * ((this.degree + 1) * 2 + this.points.length); //t must be in [0,1]
+        const res = [];
+        for (let i = 0; i < this.dimension; i++) {
+            res.push(this.getInterpol(this.seqAt(i), _t));
+        }
+        return { x: res[0], y: res[1] };
+    }
+}
+
+
+/***/ }),
+
+/***/ "./src/client/component/canvas/button.tsx":
+/*!************************************************!*\
+  !*** ./src/client/component/canvas/button.tsx ***!
+  \************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! react */ "./node_modules/react/index.js");
+/* harmony import */ var _button_scss__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./button.scss */ "./src/client/component/canvas/button.scss");
+
+
+
+const ButtonComponent = (prop) => {
+    var _a, _b;
+    const ref = (0,react__WEBPACK_IMPORTED_MODULE_0__.useRef)();
+    const [focus, setFocus] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false);
+    (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
+        const ele = ref.current;
+        const rect = ele.getBoundingClientRect();
+        setFocus(rect.bottom > prop.point.y &&
+            rect.top < prop.point.y &&
+            rect.left < prop.point.x &&
+            rect.right > prop.point.x);
+    }, [(_a = prop.point) === null || _a === void 0 ? void 0 : _a.x, (_b = prop.point) === null || _b === void 0 ? void 0 : _b.y]);
+    (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
+        if (prop.callback && prop.click && focus) {
+            prop.callback();
+        }
+    }, [prop.callback, prop.click, focus]);
+    return (react__WEBPACK_IMPORTED_MODULE_0__.createElement("div", { ref: ref, className: `button ${focus ? "focus" : ""} ${prop.click ? "active" : ""}` }, prop.label));
+};
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (ButtonComponent);
 
 
 /***/ }),
@@ -53302,12 +53647,14 @@ const CanvasComponent = (prop) => {
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! react */ "./node_modules/react/index.js");
 /* harmony import */ var react_dom__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! react-dom */ "./node_modules/react-dom/index.js");
-/* harmony import */ var react_router_dom__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! react-router-dom */ "./node_modules/react-router-dom/esm/react-router-dom.js");
-/* harmony import */ var react_router_dom__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! react-router-dom */ "./node_modules/react-router/esm/react-router.js");
+/* harmony import */ var react_router_dom__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! react-router-dom */ "./node_modules/react-router-dom/esm/react-router-dom.js");
+/* harmony import */ var react_router_dom__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! react-router-dom */ "./node_modules/react-router/esm/react-router.js");
 /* harmony import */ var _pages_login__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./pages/login */ "./src/client/pages/login.tsx");
 /* harmony import */ var _pages_board__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./pages/board */ "./src/client/pages/board.tsx");
 /* harmony import */ var _pages_signup__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./pages/signup */ "./src/client/pages/signup.tsx");
 /* harmony import */ var _index_scss__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./index.scss */ "./src/client/index.scss");
+/* harmony import */ var _SWRegister__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./SWRegister */ "./src/client/SWRegister.tsx");
+
 
 
 
@@ -53318,10 +53665,11 @@ __webpack_require__.r(__webpack_exports__);
 const root = document.getElementById('root');
 const App = () => {
     return (react__WEBPACK_IMPORTED_MODULE_0__.createElement("div", null,
-        react__WEBPACK_IMPORTED_MODULE_0__.createElement(react_router_dom__WEBPACK_IMPORTED_MODULE_6__.BrowserRouter, null,
-            react__WEBPACK_IMPORTED_MODULE_0__.createElement(react_router_dom__WEBPACK_IMPORTED_MODULE_7__.Route, { exact: true, path: "/", component: _pages_login__WEBPACK_IMPORTED_MODULE_2__.default }),
-            react__WEBPACK_IMPORTED_MODULE_0__.createElement(react_router_dom__WEBPACK_IMPORTED_MODULE_7__.Route, { path: "/board", component: _pages_board__WEBPACK_IMPORTED_MODULE_3__.default }),
-            react__WEBPACK_IMPORTED_MODULE_0__.createElement(react_router_dom__WEBPACK_IMPORTED_MODULE_7__.Route, { path: "/signup", component: _pages_signup__WEBPACK_IMPORTED_MODULE_4__.default }))));
+        react__WEBPACK_IMPORTED_MODULE_0__.createElement(react_router_dom__WEBPACK_IMPORTED_MODULE_7__.BrowserRouter, null,
+            react__WEBPACK_IMPORTED_MODULE_0__.createElement(react_router_dom__WEBPACK_IMPORTED_MODULE_8__.Route, { exact: true, path: "/", component: _pages_login__WEBPACK_IMPORTED_MODULE_2__.default }),
+            react__WEBPACK_IMPORTED_MODULE_0__.createElement(react_router_dom__WEBPACK_IMPORTED_MODULE_8__.Route, { path: "/board", component: _pages_board__WEBPACK_IMPORTED_MODULE_3__.default }),
+            react__WEBPACK_IMPORTED_MODULE_0__.createElement(react_router_dom__WEBPACK_IMPORTED_MODULE_8__.Route, { path: "/signup", component: _pages_signup__WEBPACK_IMPORTED_MODULE_4__.default })),
+        react__WEBPACK_IMPORTED_MODULE_0__.createElement(_SWRegister__WEBPACK_IMPORTED_MODULE_6__.default, null)));
 };
 (0,react_dom__WEBPACK_IMPORTED_MODULE_1__.render)(react__WEBPACK_IMPORTED_MODULE_0__.createElement(App, null), root);
 
@@ -53362,7 +53710,7 @@ var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _argume
 const BoardPageComponent = () => {
     const eventBus = (0,react__WEBPACK_IMPORTED_MODULE_0__.useMemo)(() => new rxjs__WEBPACK_IMPORTED_MODULE_4__.Subject(), []);
     const [videoBox, setVideoBox] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)();
-    const [videoElement, setVideoElement] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)();
+    const [viewBox, setViewBox] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)();
     const videoContainerRef = (0,react__WEBPACK_IMPORTED_MODULE_0__.useRef)();
     (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
         if (!videoContainerRef)
@@ -53392,17 +53740,21 @@ const BoardPageComponent = () => {
                 requestAnimationFrame(reflectPoint);
             });
             video.onloadedmetadata = () => {
+                const _viewRatio = 1.5;
+                video.width = video.videoWidth * _viewRatio;
+                video.height = video.videoHeight * _viewRatio;
                 video.play();
                 setVideoBox({ width: video.videoWidth, height: video.videoHeight });
-                console.log({ width: video.videoWidth, height: video.videoHeight });
+                setViewBox({ width: video.width, height: video.height });
+                console.log({ width: video.videoWidth, height: video.videoHeight }, { width: video.width, height: video.height });
             };
             video.onloadeddata = reflectPoint;
-            setVideoElement(video);
         }))();
     }, [!!videoContainerRef]);
     return (react__WEBPACK_IMPORTED_MODULE_0__.createElement("div", { className: "board" },
-        react__WEBPACK_IMPORTED_MODULE_0__.createElement("div", { className: "video-container", ref: videoContainerRef }, "Now Loading..."),
-        videoBox && react__WEBPACK_IMPORTED_MODULE_0__.createElement(_component_canvas__WEBPACK_IMPORTED_MODULE_3__.default, { eventBus: eventBus, videoBox: videoBox })));
+        react__WEBPACK_IMPORTED_MODULE_0__.createElement("div", { className: "body", style: viewBox && { width: viewBox.width, height: viewBox.height } },
+            react__WEBPACK_IMPORTED_MODULE_0__.createElement("div", { className: "video-container", ref: videoContainerRef }, "Now Loading..."),
+            videoBox && viewBox && react__WEBPACK_IMPORTED_MODULE_0__.createElement(_component_canvas__WEBPACK_IMPORTED_MODULE_3__.default, { eventBus: eventBus, videoBox: videoBox, viewBox: viewBox }))));
 };
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (BoardPageComponent);
 
@@ -53560,7 +53912,34 @@ __webpack_require__.r(__webpack_exports__);
 
 var ___CSS_LOADER_EXPORT___ = _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default()((_node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0___default()));
 // Module
-___CSS_LOADER_EXPORT___.push([module.id, "svg {\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  transform: scaleX(-1); }\n", "",{"version":3,"sources":["webpack://./src/client/component/canvas.scss"],"names":[],"mappings":"AAAA;EACE,kBAAkB;EAClB,MAAM;EACN,SAAS;EACT,qBAAqB,EAAA","sourcesContent":["svg {\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  transform: scaleX(-1);\n}"],"sourceRoot":""}]);
+___CSS_LOADER_EXPORT___.push([module.id, ".canvas {\n  position: absolute;\n  top: 0;\n  left: 0;\n  width: 100%;\n  height: 100%;\n  transform: scaleX(-1); }\n  .canvas svg {\n    position: absolute;\n    top: 0;\n    left: 0; }\n  .canvas .pointer {\n    position: absolute;\n    display: flex;\n    justify-content: center;\n    align-items: center; }\n    .canvas .pointer > div {\n      width: 16px;\n      height: 16px;\n      opacity: 0.2;\n      background-color: red;\n      border-radius: 8px; }\n\n.button-container {\n  position: absolute;\n  display: flex;\n  left: 0;\n  right: 0;\n  top: 0;\n  height: 150px;\n  justify-content: flex-start;\n  margin: 0 20px; }\n", "",{"version":3,"sources":["webpack://./src/client/component/canvas.scss"],"names":[],"mappings":"AAAA;EACE,kBAAkB;EAClB,MAAM;EACN,OAAO;EACP,WAAW;EACX,YAAY;EACZ,qBAAqB,EAAA;EANvB;IASI,kBAAkB;IAClB,MAAM;IACN,OAAO,EAAA;EAXX;IAeI,kBAAkB;IAClB,aAAa;IACb,uBAAuB;IACvB,mBAAmB,EAAA;IAlBvB;MAoBM,WAAW;MACX,YAAY;MACZ,YAAY;MACZ,qBAAqB;MACrB,kBAAkB,EAAA;;AAKxB;EACE,kBAAkB;EAClB,aAAa;EACb,OAAO;EACP,QAAQ;EACR,MAAM;EACN,aAAa;EACb,2BAA2B;EAC3B,cAAc,EAAA","sourcesContent":[".canvas {\n  position: absolute;\n  top: 0;\n  left: 0;\n  width: 100%;\n  height: 100%;\n  transform: scaleX(-1);\n\n  svg {\n    position: absolute;\n    top: 0;\n    left: 0;\n  }\n  \n  .pointer {\n    position: absolute;\n    display: flex;\n    justify-content: center;\n    align-items: center;\n    & > div {\n      width: 16px;\n      height: 16px;\n      opacity: 0.2;\n      background-color: red;\n      border-radius: 8px;\n    }\n  }\n}\n\n.button-container {\n  position: absolute;\n  display: flex;\n  left: 0;\n  right: 0;\n  top: 0;\n  height: 150px;\n  justify-content: flex-start;\n  margin: 0 20px;\n}"],"sourceRoot":""}]);
+// Exports
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
+
+
+/***/ }),
+
+/***/ "./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].use[1]!./node_modules/sass-loader/dist/cjs.js!./src/client/component/canvas/button.scss":
+/*!**********************************************************************************************************************************************************!*\
+  !*** ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].use[1]!./node_modules/sass-loader/dist/cjs.js!./src/client/component/canvas/button.scss ***!
+  \**********************************************************************************************************************************************************/
+/***/ ((module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../../node_modules/css-loader/dist/runtime/cssWithMappingToString.js */ "./node_modules/css-loader/dist/runtime/cssWithMappingToString.js");
+/* harmony import */ var _node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../../node_modules/css-loader/dist/runtime/api.js */ "./node_modules/css-loader/dist/runtime/api.js");
+/* harmony import */ var _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__);
+// Imports
+
+
+var ___CSS_LOADER_EXPORT___ = _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default()((_node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0___default()));
+// Module
+___CSS_LOADER_EXPORT___.push([module.id, ".button {\n  width: 120px;\n  border-bottom-left-radius: 5px;\n  border-bottom-right-radius: 5px;\n  background-color: #FFFFFFAA;\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  margin: 0 5px; }\n  .button.focus {\n    background-color: #AAAAAAAA; }\n", "",{"version":3,"sources":["webpack://./src/client/component/canvas/button.scss"],"names":[],"mappings":"AAAA;EACE,YAAY;EACZ,8BAA8B;EAC9B,+BAA+B;EAC/B,2BAA2B;EAC3B,aAAa;EACb,uBAAuB;EACvB,mBAAmB;EACnB,aAAa,EAAA;EARf;IAWI,2BAA2B,EAAA","sourcesContent":[".button {\n  width: 120px;\n  border-bottom-left-radius: 5px;\n  border-bottom-right-radius: 5px;\n  background-color: #FFFFFFAA;\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  margin: 0 5px;\n\n  &.focus {\n    background-color: #AAAAAAAA;\n  }\n}"],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -53587,7 +53966,7 @@ __webpack_require__.r(__webpack_exports__);
 
 var ___CSS_LOADER_EXPORT___ = _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default()((_node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0___default()));
 // Module
-___CSS_LOADER_EXPORT___.push([module.id, ".profile {\n  margin: 2px; }\n", "",{"version":3,"sources":["webpack://./src/client/index.scss"],"names":[],"mappings":"AAAA;EACE,WAAW,EAAA","sourcesContent":[".profile {\n  margin: 2px;\n}"],"sourceRoot":""}]);
+___CSS_LOADER_EXPORT___.push([module.id, "body {\n  margin: 0; }\n\n.profile {\n  margin: 2px; }\n", "",{"version":3,"sources":["webpack://./src/client/index.scss"],"names":[],"mappings":"AAAA;EACE,SAAS,EAAA;;AAGX;EACE,WAAW,EAAA","sourcesContent":["body {\n  margin: 0;\n}\n\n.profile {\n  margin: 2px;\n}"],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -53614,7 +53993,7 @@ __webpack_require__.r(__webpack_exports__);
 
 var ___CSS_LOADER_EXPORT___ = _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default()((_node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0___default()));
 // Module
-___CSS_LOADER_EXPORT___.push([module.id, ".board {\n  position: relative; }\n", "",{"version":3,"sources":["webpack://./src/client/pages/board.scss"],"names":[],"mappings":"AAAA;EAGE,kBAAkB,EAAA","sourcesContent":[".board {\n  // position: absolute;\n  // z-index: 10000;\n  position: relative;\n}\n"],"sourceRoot":""}]);
+___CSS_LOADER_EXPORT___.push([module.id, ".board {\n  position: relative; }\n  .board .body {\n    position: relative;\n    display: flex; }\n    .board .body .video-container {\n      position: absolute;\n      width: 100%;\n      height: 100%;\n      display: flex;\n      justify-content: center;\n      align-items: center; }\n", "",{"version":3,"sources":["webpack://./src/client/pages/board.scss"],"names":[],"mappings":"AAAA;EAGE,kBAAkB,EAAA;EAHpB;IAMI,kBAAkB;IAClB,aAAa,EAAA;IAPjB;MAUM,kBAAkB;MAClB,WAAW;MACX,YAAY;MACZ,aAAa;MACb,uBAAuB;MACvB,mBAAmB,EAAA","sourcesContent":[".board {\n  // position: absolute;\n  // z-index: 10000;\n  position: relative;\n\n  .body {\n    position: relative;\n    display: flex;\n\n    .video-container {\n      position: absolute;\n      width: 100%;\n      height: 100%;\n      display: flex;\n      justify-content: center;\n      align-items: center;\n    }\n  }\n}\n"],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -90162,6 +90541,36 @@ var update = _node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js
 
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_css_loader_dist_cjs_js_ruleSet_1_rules_1_use_1_node_modules_sass_loader_dist_cjs_js_canvas_scss__WEBPACK_IMPORTED_MODULE_1__.default.locals || {});
+
+/***/ }),
+
+/***/ "./src/client/component/canvas/button.scss":
+/*!*************************************************!*\
+  !*** ./src/client/component/canvas/button.scss ***!
+  \*************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! !../../../../node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js */ "./node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js");
+/* harmony import */ var _node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_css_loader_dist_cjs_js_ruleSet_1_rules_1_use_1_node_modules_sass_loader_dist_cjs_js_button_scss__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! !!../../../../node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].use[1]!../../../../node_modules/sass-loader/dist/cjs.js!./button.scss */ "./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].use[1]!./node_modules/sass-loader/dist/cjs.js!./src/client/component/canvas/button.scss");
+
+            
+
+var options = {};
+
+options.insert = "head";
+options.singleton = false;
+
+var update = _node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0___default()(_node_modules_css_loader_dist_cjs_js_ruleSet_1_rules_1_use_1_node_modules_sass_loader_dist_cjs_js_button_scss__WEBPACK_IMPORTED_MODULE_1__.default, options);
+
+
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_css_loader_dist_cjs_js_ruleSet_1_rules_1_use_1_node_modules_sass_loader_dist_cjs_js_button_scss__WEBPACK_IMPORTED_MODULE_1__.default.locals || {});
 
 /***/ }),
 

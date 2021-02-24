@@ -1,13 +1,9 @@
-import { Observable } from 'rxjs';
 import * as React from 'react';
+import { Vector } from '../../interface/vector';
 
 import './button.scss';
 import { useEffect, useRef, useState } from 'react';
 
-interface Vector {
-  x: number;
-  y: number;
-}
 
 interface ButtonProp {
   order: number;

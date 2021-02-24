@@ -2,24 +2,29 @@ import { Observable } from 'rxjs';
 import * as handpose from '@tensorflow-models/handpose';
 import { CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as React from 'react';
+import { Vector } from '../interface/vector';
 
 import './canvas.scss';
 import ButtonComponent from './canvas/button';
+import { BSpline } from './canvas/bspline';
 
-interface Vector {
-  x: number;
-  y: number;
+interface VectorEx extends Vector {
+  ts: number;
 }
+
 interface CanvasProp {
     eventBus: Observable<handpose.AnnotatedPrediction[]>
     videoBox: {width: number, height: number}
     viewBox: {width: number, height: number}
 }
+
+const BSPLINE_DEGREE = 5;
+
 const CanvasComponent = (prop: CanvasProp) => {
   const canvasRef = useRef<HTMLCanvasElement>();
 
   const [pointer, setPointer] = useState<Vector>();
-  const [lines, setLines] = useState<Vector[][]>([[]]);
+  const [lines, setLines] = useState<VectorEx[][]>([[]]);
   const [paths, setPaths] = useState<string[]>([]);
   const [trigger, setTrigger] = useState(false);
   const [fingers, setFingers] = useState<any>();
@@ -37,9 +42,23 @@ const CanvasComponent = (prop: CanvasProp) => {
     prop.videoBox?.height
   ])
 
-  const createPath = (_vectors: Vector[]) => {
-    let line = _vectors.reduce((p, vector, i) => {
+  const createPath = (_vectors: VectorEx[]) => {
+    const _v = _vectors.map(v => ({ x: v.x, y: v.y })) as Vector[];
+    const bspline = new BSpline(_v, BSPLINE_DEGREE, true);
+
+    const splineVectors = [];
+    for (let t = 0; t <= 1; t += 0.01){
+      splineVectors.push(bspline.calcAt(t)); 
+    }
+    console.log(splineVectors)
+
+    let line = splineVectors.reduce((p, vector, i) => {
       const prefix = i == 0 ? "M" : "L";
+      const preVector = i == 0 ? null : _vectors[i - 1];
+
+      // const preDistance = distance(preVector, vector);
+      // console.log("preDistance", preDistance)
+
       const v = ratio(vector);
       p += `${prefix} ${v.x},${v.y} `;
       return p;
@@ -71,9 +90,9 @@ const CanvasComponent = (prop: CanvasProp) => {
     return result;
   }
 
-  const write = (vector: Vector) => {
+  const write = (vector: Vector, ts: number) => {
     const index = lines.length - 1;
-    lines[index].push(vector);
+    lines[index].push({ ...vector, ts });
     const paths = lines.map(line => createPath(line));
     setPaths(paths);
     setLines(lines);
@@ -120,7 +139,7 @@ const CanvasComponent = (prop: CanvasProp) => {
         _vec(fingers.thumb[0], fingers.palmBase[0])
       );
       if (_trigger) {
-        write(fingers.indexFinger[3]);
+        write(fingers.indexFinger[3], Date.now());
       } else if (lines.length > 0 && lines[lines.length - 1].length != 0) {
         lines.push([]);
         setLines(lines);
@@ -222,20 +241,14 @@ const CanvasComponent = (prop: CanvasProp) => {
           label={"黒"}
           point={prepareVector(pointer)}
           click={trigger}
-          callback={() => {
-            console.log("setStrokeColor #000")
-            setStrokeColor("#000");
-          }}
+          callback={() => setStrokeColor("#000")}
         ></ButtonComponent>
         <ButtonComponent
           order={0}
           label={"白"}
           point={prepareVector(pointer)}
           click={trigger}
-          callback={() => {
-            console.log("setStrokeColor #FFF")
-            setStrokeColor("#FFF");
-          }}
+          callback={() => setStrokeColor("#FFF")}
         ></ButtonComponent>
       </div>
     </>

@@ -6,6 +6,7 @@ import BoardPageComponent from './pages/board';
 import SignUpPageComponent from './pages/signup';
 
 import './index.scss';
+import SWRegister from './SWRegister';
 
 const root = document.getElementById('root')
 const App = () => {
@@ -16,6 +17,7 @@ const App = () => {
         <Route path="/board" component={BoardPageComponent}></Route>
         <Route path="/signup" component={SignUpPageComponent}></Route>
       </Router>
+      <SWRegister />
     </div>
   );
 };
